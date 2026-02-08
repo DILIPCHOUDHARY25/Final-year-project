@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import StudentDashboard from './pages/StudentDashboard';
+import PeerSupport from './components/PeerSupport';
 
 const PrivateRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -31,6 +32,14 @@ function App() {
           element={
             <PrivateRoute>
               <StudentDashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/peer-support"
+          element={
+            <PrivateRoute>
+              <PeerSupport />
             </PrivateRoute>
           }
         />

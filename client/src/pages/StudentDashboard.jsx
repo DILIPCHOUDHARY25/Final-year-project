@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
+import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ChatWidget from '../components/ChatWidget';
+import { API_BASE_URL, AI_BASE_URL } from '../lib/utils.js';
 import {
   BookOpen,
   Calendar,
@@ -12,11 +14,77 @@ import {
   TrendingUp,
   MessageSquare,
   Activity,
+  Heart,
 } from 'lucide-react';
 
 const StudentDashboard = () => {
   const { user, isAuthenticated } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedMood, setSelectedMood] = useState(null);
+  const [moodHistory, setMoodHistory] = useState([]);
+  const [sentimentResult, setSentimentResult] = useState(null);
+  const [loadingMood, setLoadingMood] = useState(false);
+
+  const moods = [
+    { value: 1, emoji: '😢', label: 'Very Sad', color: 'bg-red-100 hover:bg-red-200' },
+    { value: 2, emoji: '😟', label: 'Sad', color: 'bg-orange-100 hover:bg-orange-200' },
+    { value: 3, emoji: '😐', label: 'Neutral', color: 'bg-yellow-100 hover:bg-yellow-200' },
+    { value: 4, emoji: '😊', label: 'Happy', color: 'bg-green-100 hover:bg-green-200' },
+    { value: 5, emoji: '😁', label: 'Very Happy', color: 'bg-emerald-100 hover:bg-emerald-200' },
+  ];
+
+  const handleMoodClick = async (mood) => {
+    setLoadingMood(true);
+    setSelectedMood(mood.value);
+    setSentimentResult(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      const sentimentResponse = await axios.post(`${AI_BASE_URL}/analyze-sentiment`, {
+        text: `I'm feeling ${mood.label.toLowerCase()}`,
+      });
+
+      const sentimentData = sentimentResponse.data;
+
+      await axios.post(`${API_BASE_URL}/api/moods`, {
+        mood: mood.value,
+        emoji: mood.emoji,
+        sentiment: {
+          label: sentimentData.label,
+          score: sentimentData.score,
+        },
+      });
+
+      setSentimentResult(sentimentData);
+
+      const historyResponse = await axios.get(`${API_BASE_URL}/api/moods`);
+      setMoodHistory(historyResponse.data.moodHistory || []);
+    } catch (error) {
+      console.error('Error logging mood:', error);
+      alert('Failed to log mood. Please try again.');
+    } finally {
+      setLoadingMood(false);
+    }
+  };
+
+  const fetchMoodHistory = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const response = await axios.get(`${API_BASE_URL}/api/moods`);
+      setMoodHistory(response.data.moodHistory || []);
+    } catch (error) {
+      console.error('Error fetching mood history:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchMoodHistory();
+    }
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -79,6 +147,54 @@ const StudentDashboard = () => {
               <p className="mt-1 text-gray-600">
                 Here's what's happening with your learning journey
               </p>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-8">
+              <div className="flex items-center space-x-2 mb-4">
+                <Heart className="h-5 w-5 text-primary-600" />
+                <h2 className="text-lg font-semibold text-gray-900">How are you feeling today?</h2>
+              </div>
+              <div className="grid grid-cols-5 gap-2 sm:gap-4">
+                {moods.map((mood) => (
+                  <button
+                    key={mood.value}
+                    onClick={() => handleMoodClick(mood)}
+                    disabled={loadingMood}
+                    className={`flex flex-col items-center p-3 sm:p-4 rounded-xl transition-all ${
+                      selectedMood === mood.value
+                        ? 'ring-2 ring-primary-500 scale-105'
+                        : ''
+                    } ${mood.color} ${loadingMood ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <span className="text-2xl sm:text-3xl mb-1">{mood.emoji}</span>
+                    <span className="text-xs text-gray-700 hidden sm:block">{mood.label}</span>
+                  </button>
+                ))}
+              </div>
+              {sentimentResult && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-gray-700">
+                    <strong>Sentiment Analysis:</strong> {sentimentResult.label} (confidence:{' '}
+                    {(sentimentResult.score * 100).toFixed(1)}%)
+                  </p>
+                </div>
+              )}
+              {moodHistory.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">Recent Moods</h3>
+                  <div className="flex space-x-2">
+                    {moodHistory.slice(-7).reverse().map((entry, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 rounded-full text-lg sm:text-xl"
+                        title={`${new Date(entry.timestamp).toLocaleDateString()}: ${entry.mood}/5`}
+                      >
+                        {entry.emoji}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
