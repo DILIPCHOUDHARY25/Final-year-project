@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema(
       default: "student"
     },
     moodLogs: {
-      type: [String],
+      type: Array,
       default: []
     },
     parentPhone: {
