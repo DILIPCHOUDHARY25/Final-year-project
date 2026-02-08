@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { Home, BookOpen, Calendar, MessageCircle, Settings, X } from 'lucide-react';
+import { Home, BookOpen, Calendar, MessageCircle, Settings, X, Users } from 'lucide-react';
 import { cn } from '../lib/utils.js';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const navItems = [
     { to: '/dashboard', icon: Home, label: 'Dashboard' },
+    { to: '/peer-support', icon: Users, label: 'Peer Support' },
     { to: '/courses', icon: BookOpen, label: 'Courses' },
     { to: '/schedule', icon: Calendar, label: 'Schedule' },
     { to: '/messages', icon: MessageCircle, label: 'Messages' },

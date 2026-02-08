@@ -23,10 +23,28 @@ const userSchema = new mongoose.Schema(
       enum: ["student", "parent", "educator"],
       default: "student"
     },
-    moodLogs: {
-      type: Array,
-      default: []
-    },
+    moodLogs: [{
+      mood: {
+        type: Number,
+        min: 1,
+        max: 5
+      },
+      emoji: {
+        type: String
+      },
+      timestamp: {
+        type: Date,
+        default: Date.now
+      },
+      sentiment: {
+        label: {
+          type: String
+        },
+        score: {
+          type: Number
+        }
+      }
+    }],
     parentPhone: {
       type: String,
       trim: true
