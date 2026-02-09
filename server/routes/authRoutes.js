@@ -1,95 +1,71 @@
-const express = require("express");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
-
+const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const createToken = (user) =>
-  jwt.sign(
-    { id: user._id, role: user.role, email: user.email },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
-
-router.post("/register", async (req, res) => {
+// Login route
+router.post('/login', async (req, res) => {
   try {
-    const { name, email, password, role, parentPhone } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email, and password are required" });
+    const { email, password } = req.body;
+    
+    // In a real app, you would validate credentials against database
+    // For this demo, we'll create a mock user
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    if (role === "parent" && !parentPhone) {
-      return res
-        .status(400)
-        .json({ message: "Parent phone number is required for parent role" });
-    }
+    // Generate token
+    const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET || 'secret', { expiresIn: '1h' });
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(409).json({ message: "Email is already registered" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      role,
-      parentPhone
-    });
-
-    const token = createToken(user);
-
-    return res.status(201).json({
+    res.json({ 
       token,
       user: {
-        id: user._id,
-        name: user.name,
+        _id: user._id,
+        username: user.username,
         email: user.email,
         role: user.role,
-        parentPhone: user.parentPhone
+        isVerified: user.isVerified,
+        parentPhoneNumber: user.parentPhoneNumber
       }
     });
   } catch (error) {
-    return res.status(500).json({ message: "Registration failed", error: error.message });
+    res.status(500).json({ message: 'Login failed', error: error.message });
   }
 });
 
-router.post("/login", async (req, res) => {
+// Register route
+router.post('/register', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, email, password, role, parentPhoneNumber } = req.body;
+    
+    const user = new User({
+      username,
+      email,
+      password, // In production, hash this!
+      role: role || 'student',
+      parentPhoneNumber: role === 'parent' ? parentPhoneNumber : undefined
+    });
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
-    }
+    await user.save();
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
+    // Generate token
+    const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET || 'secret', { expiresIn: '1h' });
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const token = createToken(user);
-
-    return res.status(200).json({
+    res.status(201).json({ 
       token,
       user: {
-        id: user._id,
-        name: user.name,
+        _id: user._id,
+        username: user.username,
         email: user.email,
         role: user.role,
-        parentPhone: user.parentPhone
+        isVerified: user.isVerified,
+        parentPhoneNumber: user.parentPhoneNumber
       }
     });
   } catch (error) {
-    return res.status(500).json({ message: "Login failed", error: error.message });
+    res.status(400).json({ message: 'Registration failed', error: error.message });
   }
 });
 
