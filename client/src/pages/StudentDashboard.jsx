@@ -5,6 +5,9 @@ import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ChatWidget from '../components/ChatWidget';
+import StreakDisplay from '../components/StreakDisplay';
+import BadgeGrid from '../components/BadgeGrid';
+import BadgeUnlockModal from '../components/BadgeUnlockModal';
 import { API_BASE_URL, AI_BASE_URL } from '../lib/utils.js';
 import {
   BookOpen,
@@ -15,6 +18,7 @@ import {
   MessageSquare,
   Activity,
   Heart,
+  Award,
 } from 'lucide-react';
 
 const StudentDashboard = () => {
@@ -24,6 +28,14 @@ const StudentDashboard = () => {
   const [moodHistory, setMoodHistory] = useState([]);
   const [sentimentResult, setSentimentResult] = useState(null);
   const [loadingMood, setLoadingMood] = useState(false);
+  const [gamification, setGamification] = useState({
+    points: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+    badges: []
+  });
+  const [nextBadge, setNextBadge] = useState(null);
+  const [newBadgeUnlocked, setNewBadgeUnlocked] = useState(null);
 
   const moods = [
     { value: 1, emoji: '😢', label: 'Very Sad', color: 'bg-red-100 hover:bg-red-200' },
@@ -48,7 +60,7 @@ const StudentDashboard = () => {
 
       const sentimentData = sentimentResponse.data;
 
-      await axios.post(`${API_BASE_URL}/api/moods`, {
+      const moodResponse = await axios.post(`${API_BASE_URL}/api/moods`, {
         mood: mood.value,
         emoji: mood.emoji,
         sentiment: {
@@ -61,6 +73,21 @@ const StudentDashboard = () => {
 
       const historyResponse = await axios.get(`${API_BASE_URL}/api/moods`);
       setMoodHistory(historyResponse.data.moodHistory || []);
+
+      if (moodResponse.data.gamification) {
+        setGamification({
+          points: moodResponse.data.gamification.points,
+          currentStreak: moodResponse.data.gamification.currentStreak,
+          longestStreak: moodResponse.data.gamification.longestStreak,
+          badges: moodResponse.data.gamification.badges
+        });
+
+        if (moodResponse.data.gamification.newBadges && moodResponse.data.gamification.newBadges.length > 0) {
+          setNewBadgeUnlocked(moodResponse.data.gamification.newBadges[0]);
+        }
+
+        await fetchGamificationData();
+      }
     } catch (error) {
       console.error('Error logging mood:', error);
       alert('Failed to log mood. Please try again.');
@@ -80,9 +107,26 @@ const StudentDashboard = () => {
     }
   };
 
+  const fetchGamificationData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const response = await axios.get(`${API_BASE_URL}/api/moods/gamification`);
+      if (response.data.gamification) {
+        setGamification(response.data.gamification);
+      }
+      if (response.data.nextBadgeMilestone) {
+        setNextBadge(response.data.nextBadgeMilestone);
+      }
+    } catch (error) {
+      console.error('Error fetching gamification data:', error);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchMoodHistory();
+      fetchGamificationData();
     }
   }, [isAuthenticated]);
 
@@ -92,10 +136,10 @@ const StudentDashboard = () => {
 
   const stats = [
     {
-      title: 'Courses',
-      value: '4',
-      icon: BookOpen,
-      color: 'bg-blue-100 text-blue-600',
+      title: 'Points',
+      value: gamification.points.toString(),
+      icon: Award,
+      color: 'bg-yellow-100 text-yellow-600',
     },
     {
       title: 'Completed',
@@ -216,6 +260,20 @@ const StudentDashboard = () => {
               ))}
             </div>
 
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <StreakDisplay 
+                currentStreak={gamification.currentStreak}
+                longestStreak={gamification.longestStreak}
+                nextBadge={nextBadge}
+              />
+              <div className="lg:col-span-2">
+                <BadgeGrid 
+                  earnedBadges={gamification.badges}
+                  currentStreak={gamification.currentStreak}
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -321,6 +379,13 @@ const StudentDashboard = () => {
       </div>
 
       <ChatWidget />
+      
+      {newBadgeUnlocked && (
+        <BadgeUnlockModal 
+          badge={newBadgeUnlocked} 
+          onClose={() => setNewBadgeUnlocked(null)} 
+        />
+      )}
     </div>
   );
 };

@@ -30,9 +30,20 @@ export const AuthProvider = ({ children }) => {
       });
 
       const { token, user: userData } = response.data;
+      
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
+      try {
+        const gamificationResponse = await axios.get(`${API_BASE_URL}/api/moods/gamification`);
+        if (gamificationResponse.data.gamification) {
+          userData.gamification = gamificationResponse.data.gamification;
+        }
+      } catch (gamificationError) {
+        console.warn('Failed to fetch gamification data:', gamificationError);
+      }
+      
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(userData));
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setUser(userData);
       return { success: true };
     } catch (err) {

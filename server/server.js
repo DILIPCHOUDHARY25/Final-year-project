@@ -20,9 +20,11 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/parent_ve
 // Routes will be added here
 const authRoutes = require('./routes/authRoutes');
 const verificationRoutes = require('./routes/verificationRoutes');
+const moodRoutes = require('./routes/moodRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', verificationRoutes);
+app.use('/api/moods', moodRoutes);
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');

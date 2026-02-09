@@ -28,6 +28,54 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  moodLogs: [{
+    mood: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 5
+    },
+    emoji: {
+      type: String,
+      required: true
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    },
+    sentiment: {
+      label: String,
+      score: Number
+    }
+  }],
+  gamification: {
+    points: {
+      type: Number,
+      default: 0
+    },
+    currentStreak: {
+      type: Number,
+      default: 0
+    },
+    longestStreak: {
+      type: Number,
+      default: 0
+    },
+    lastCheckIn: {
+      type: Date,
+      default: null
+    },
+    badges: [{
+      id: String,
+      name: String,
+      icon: String,
+      description: String,
+      earnedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }]
+  },
   createdAt: {
     type: Date,
     default: Date.now
