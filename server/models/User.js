@@ -23,6 +23,14 @@ const userSchema = new mongoose.Schema(
       enum: ["student", "parent", "educator"],
       default: "student"
     },
+    children: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    }],
+    parentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
     moodLogs: [{
       mood: {
         type: Number,
