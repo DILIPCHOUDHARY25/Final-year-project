@@ -6,6 +6,8 @@ const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const moodRoutes = require("./routes/moodRoutes");
+const parentRoutes = require("./routes/parentRoutes");
+const educatorRoutes = require("./routes/educatorRoutes");
 
 dotenv.config();
 connectDB();
@@ -26,6 +28,8 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/moods", moodRoutes);
+app.use("/api/parent", parentRoutes);
+app.use("/api/educator", educatorRoutes);
 
 const server = http.createServer(app);
 
